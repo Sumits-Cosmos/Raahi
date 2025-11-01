@@ -14,6 +14,11 @@ module.exports.registerUser = (async (req, res, next) => {
     console.log(req.body);
 
     const { fullName, email, password } = req.body;
+    
+    const isUserAlready = await userModel.findOne({email})
+    if(isUserAlready){
+       return res.status(400).json({message : 'User already exist'});
+    }
 
     const hashedPassword = await userModel.hashedPassword(password);
 
@@ -52,7 +57,7 @@ module.exports.loginUser = async (req, res, next) => {
     const token = user.generateAuthToken();
     res.cookie('token', token);
     console.log(user, token);
-    res.status(200).json('token', token);
+    res.status(200).json({user, token});
 }
 
 module.exports.getUserProfile = async(req, res,next)=> {
@@ -60,11 +65,15 @@ module.exports.getUserProfile = async(req, res,next)=> {
 }
 
 module.exports.logoutUser = async (req, res, next) => {
-    res.clearCookie('token');
-    
     const token = req.cookies.token || req.headers.authorization.split(' ')[1];
 
-    await blackListTokenModel.create({token})
+     await blackListTokenModel.updateOne(
+      { token },
+      { $setOnInsert: { token } },
+      { upsert: true }
+    );
+
+    res.clearCookie('token');
     res.status(200).json({ message: 'Logged out successfully' });
 }
 

@@ -2,6 +2,7 @@ const mongoose = require('mongoose');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 
+
 const captainSchema = new mongoose.Schema({
     fullName: {
         firstName:{ 
@@ -25,7 +26,7 @@ const captainSchema = new mongoose.Schema({
     password: {
         type: String,
         required: true,
-        minlength: [8, 'Password must be at least 8 characters long'],
+        minlength: [3, 'Password must be at least 3 characters long'],
         select: false,
         },
     socketId: {
@@ -35,7 +36,7 @@ const captainSchema = new mongoose.Schema({
     status: {
        type: String,
        enum: ['active', 'inactive'],
-       default: 'active',
+       default: 'inactive',
     },
 
     vehicle: {
@@ -65,7 +66,7 @@ const captainSchema = new mongoose.Schema({
     },
 
     location: {
-        ltd: {
+        lat: {
             type: Number,
         },
         lng: {
@@ -78,7 +79,7 @@ const captainSchema = new mongoose.Schema({
 
 
 captainSchema.methods.generateAuthToken = function() {
-    const token = jwt.sign({ _id: this._id }, process.env.SECRET_KEY)
+    const token = jwt.sign({ _id: this._id }, process.env.JWT_SECRET)
     return token;
 }
 
