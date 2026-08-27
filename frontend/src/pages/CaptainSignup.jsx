@@ -20,10 +20,13 @@ const CaptainSignup = () => {
       // const [captainData, setCaptainData] = useState({}); // baad me hatana hai
 
 
-      const {captain, setCaptain} = React.useContext(CaptainDataContext)
+      const { captain, setCaptain } = useContext(CaptainDataContext)
     
+      const [error, setError] = useState(null);
+
       const submitHandler = async (e) => {
         e.preventDefault();
+        setError(null);
         const captainData = {
           fullName: {
             firstName: firstName,
@@ -34,29 +37,39 @@ const CaptainSignup = () => {
           vehicle: {
             color: vehicleColor,
             numberPlate: vehiclePlate,
-            capacity: vehicleCapacity,
+            capacity: Number(vehicleCapacity),
             vehicleType: vehicleType
           }
         }
-        console.log("SendingData: ",captainData);
+        console.log("SendingData: ", captainData);
 
-        const response = await axios.post(`${import.meta.env.VITE_BASE_URL}/captains/register`, captainData);
-        if(response.status === 201){
-          const data = response.data;
-          setCaptain(data);
-          localStorage.setItem('token', data.token);
-          navigate('/captain-home');
+        try {
+          const response = await axios.post(`${import.meta.env.VITE_BASE_URL}/captains/register`, captainData);
+          if (response.status === 201) {
+            const { token, captain } = response.data;
+            setCaptain(captain);
+            localStorage.setItem('token', token);
+            setFirstName('');
+            setLastName('');
+            setEmail('');
+            setPassword('');
+            setVehicleColor('');
+            setVehiclePlate('');
+            setVehicleCapacity('');
+            setVehicleType('');
+            navigate('/captain-home');
+          }
+        } catch (err) {
+          const apiError = err?.response?.data;
+          if (apiError?.errors) {
+            setError(apiError.errors.map((item) => item.msg).join(', '));
+          } else if (apiError?.message) {
+            setError(apiError.message);
+          } else {
+            setError('Signup failed. Please check your input and try again.');
+          }
+          console.error('Signup error:', err);
         }
-
-        console.log(captainData);
-        setFirstName('');
-        setLastName('');
-        setEmail('');
-        setPassword('');
-        setVehicleColor('')
-        setVehiclePlate('')
-        setVehicleCapacity('')
-        setVehicleType('')
       }
 
 
@@ -163,6 +176,7 @@ const CaptainSignup = () => {
             </select>
           </div>
         <button className='bg-[#111] text-white font-semibold mb-3 rounded px-4 py-2 w-full text-lg placeholder:text-base' type='submit'>Create Account</button>
+        {error && <div className='text-red-600 text-sm mb-3'>{error}</div>}
         <p className='text-center'>Already registered? <Link to='/captain-login' className='text-blue-600'>Login here</Link></p>
       </form>
     </div>

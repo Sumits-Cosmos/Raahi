@@ -1,28 +1,36 @@
-import { createContext, useState, useContext } from 'react';
 
+import { createContext, useState, useContext, useEffect } from 'react';
 
-// Create the context
 export const CaptainDataContext = createContext();
 
-// Create a provider component
 const CaptainContext = ({ children }) => {
-    const [captain, setCaptain] = useState(null);
-    const [isloading, setIsLoading] = useState(false);
-    const [error, setError] = useState(null);
+    const [ captain, setCaptain ] = useState(null);
+    const [ isLoading, setIsLoading ] = useState(false);
+    const [ error, setError ] = useState(null);
 
-    const updateCaptain = async (captainData) => {
+    // useEffect(()=> {
+    //     const savedCaptain = localStorage.getItem("captain");
+    //     if(savedCaptain){
+    //         const parsed = JSON.parse(savedCaptain);
+    //         setCaptain(parsed);
+    //         console.log("Captain loaded: ", parsed);
+    //     }
+    // },[]);
+
+    const updateCaptain = (captainData) => {
         setCaptain(captainData);
-    }
+        localStorage.setItem("captain", JSON.stringify(captainData));
+    };
 
     const value = {
-            captain,
-            setCaptain,
-            isloading,
-            setIsLoading,
-            error,
-            setError,
-            updateCaptain,
-    }
+        captain,
+        setCaptain,
+        isLoading,
+        setIsLoading,
+        error,
+        setError,
+        updateCaptain
+    };
 
     return (
         <CaptainDataContext.Provider value={value}>
@@ -30,6 +38,5 @@ const CaptainContext = ({ children }) => {
         </CaptainDataContext.Provider>
     );
 };
-
 
 export default CaptainContext;

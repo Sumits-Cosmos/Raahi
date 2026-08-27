@@ -24,6 +24,7 @@ const CaptainLogin = () => {
         const data = response.data;
         setCaptain(data.captain);
         localStorage.setItem('token', data.token);
+        localStorage.setItem('captain', JSON.stringify(data.captain));
         navigate('/captain-home');
       }
       // console.log(data);
@@ -35,7 +36,7 @@ const CaptainLogin = () => {
    <div className='p-7 flex flex-col justify-between h-screen'>
     <div>
       <Link to = '/'>
-        <img className='w-16 mb-10' src="https://upload.wikimedia.org/wikipedia/commons/c/cc/Uber_logo_2018.png" alt="raahi"/>
+        <img className='w-16 mb-10' src="./RaahiLogo.png" alt="raahi"/>
       </Link>
       <form onSubmit={(e) => {
         submitHandler(e)

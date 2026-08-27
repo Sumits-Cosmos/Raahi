@@ -15,6 +15,7 @@ const CaptainProtectWrapper = ({children}) => {
     useEffect(() => {   
     if(!token){
         navigate('/captain-login');
+        return;
     }
      axios.get(`${import.meta.env.VITE_BASE_URL}/captains/profile`, {
         headers: {
@@ -22,12 +23,14 @@ const CaptainProtectWrapper = ({children}) => {
         }
     }).then((response) => {
         if(response.status === 200){
-            setCaptain(response.data.captain)   //do same for user, doing this will 
+            console.log("Full API Response:", response.data);
+            setCaptain(response.data)   //do same for user, doing this will 
             setIsLoading(false);                //enhance the security by fetching the child 
         }                                       //components data only after verifying token          
     }).catch((err) => {
         console.log(err);
         localStorage.removeItem('token');
+        setIsLoading(false);
         navigate('/captain-login');
     })
 

@@ -8,42 +8,53 @@ const Login = () => {
     
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [userData, setUserData] = useState({});
+  const [error, setError] = useState(null);
 
   const navigate = useNavigate();
   const {user, setUser} = useContext(UserDataContext)
 
   const submitHandler = async (e) => {
     e.preventDefault();
-    // setUserData({
-    //   email: email,            // from state management for only frontend purpose
-    //   password: password 
-    // })
-    const checkUser = {
-      email: email,
-      password: password
-    }
-    const response = await axios.post(`${import.meta.env.VITE_BASE_URL}/users/login`, checkUser)
-    if(response.status === 200){
+    setError(null);
+    
+    try {
+      const checkUser = {
+        email: email,
+        password: password
+      }
+      const response = await axios.post(`${import.meta.env.VITE_BASE_URL}/users/login`, checkUser)
+      
       const data = response.data;
       setUser(data.user);
       localStorage.setItem('token', data.token);
       console.log("login successful");
+      
+      setEmail('');
+      setPassword('');
       navigate('/home');
-    }else{
-      console.log("login failed");
+    } catch (err) {
+      console.error('Login error:', err);
+      if (err.response?.status === 401) {
+        setError('Invalid email or password');
+      } else if (err.response?.data?.message) {
+        setError(err.response.data.message);
+      } else {
+        setError('Login failed. Please try again.');
+      }
     }
-    
-    setEmail('');
-    setPassword('');
   }
 
   return (
     <div className='p-7 flex flex-col justify-between h-screen'>
     <div>
       <Link to = '/'>
-             <img className='w-16 mb-10' src="https://upload.wikimedia.org/wikipedia/commons/c/cc/Uber_logo_2018.png" alt="raahi"/>
+             <img className='w-16 mb-10' src="./RaahiLogo.png" alt="raahi"/>
       </Link>
+      {error && (
+        <div className='bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4'>
+          {error}
+        </div>
+      )}
       <form onSubmit={(e) => {
         submitHandler(e)
       }}>

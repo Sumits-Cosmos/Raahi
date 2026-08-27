@@ -23,7 +23,7 @@ module.exports.registerCaptain = (async (req, res) => {
 
  const hashedPassword = await captainModel.hashedPassword(password);
 
- const captian = await captainService.createCaptain({
+ const captain = await captainService.createCaptain({
     firstName: fullName.firstName,
     lastName: fullName.lastName,
     email,
@@ -33,12 +33,10 @@ module.exports.registerCaptain = (async (req, res) => {
     numberPlate: vehicle.numberPlate,
     capacity: vehicle.capacity,
     vehicleType: vehicle.vehicleType,
-    
-
  });
 
- const token = captian.generateAuthToken();
- res.status(201).json({token, captian});
+ const token = captain.generateAuthToken();
+ res.status(201).json({ token, captain });
 
 });
 

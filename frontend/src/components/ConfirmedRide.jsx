@@ -18,28 +18,28 @@ const ConfirmedRide = (props) => {
             <i className="text-lg ri-map-pin-fill"></i>
             <div>
               <h3 className='text-lg font-medium'>657/11-B</h3>
-              <p className='text-sm -mt-1 text-gray-600'>Channasandra, Bangalore, Karnataka</p>
+              <p className='text-sm -mt-1 text-gray-600'>{props.pickup}</p>
             </div>
           </div>
           <div className='flex item-center gap-4 mb-3 p-3 border-b-1 '>
             <i className="text-lg ri-map-pin-2-fill"></i>
             <div>
               <h3 className='text-lg font-medium'>657/11-B</h3>
-              <p className='text-sm -mt-1 text-gray-600'>Channasandra, Bangalore, Karnataka</p>
+              <p className='text-sm -mt-1 text-gray-600'>{props.destination}</p>
             </div>
           </div>
           <div className='flex item-center gap-4 mb-3  p-3 '>
             <i className="ri-money-rupee-circle-fill"></i>
             <div>
-              <h3 className='text-lg font-medium'>₹193.50</h3>
+              <h3 className='text-lg font-medium'>₹{props.fare[props.vehicleType]}</h3>
               <p className='text-sm -mt-1 text-gray-600'>Cash Cash</p>
             </div>
           </div>
         </div>
   
         <button onClick={() => {
-          props.setVehicleFound(true);
-          props.setConfirmedRidePanel(false);
+          console.log('🔘 [ConfirmedRide BUTTON CLICKED] Calling createRide()');
+          props.createRide();
         }}
         className='w-full bg-green-600 font-semibold p-2 rounded-lg mt-5'>Confirm your Ride</button>
 
