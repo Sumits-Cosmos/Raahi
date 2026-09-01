@@ -27,51 +27,6 @@
 
 ---
 
-## 🏛️ System Architecture (HLD)
-
-```mermaid
-flowchart TB
-    subgraph CLIENTS["📱 Client Tier (Web & Mobile)"]
-        RiderApp["🧑‍💼 Rider App (React / Leaflet)\n- Live GPS Tracking\n- Route Alternatives\n- Fare Breakdown"]
-        CaptainApp["🚕 Captain App (React / Leaflet)\n- Live GPS Telemetry\n- Ride Dispatch Popups\n- OTP Verification"]
-    end
-
-    subgraph INGRESS["🌐 Ingress & Load Balancing"]
-        ALB["NGINX / ALB Reverse Proxy\n- SSL Termination (HTTPS/WSS)\n- Sticky WebSocket Routing"]
-    end
-
-    subgraph BACKEND["⚡ Application Services (Node.js)"]
-        SocketGateway["🔌 WebSocket Gateway (Socket.IO)"]
-        AuthService["🔐 Auth & Security Service"]
-        RoutingEngine["🗺️ Smart Routing Engine (OSRM)"]
-        PricingEngine["📈 Dynamic Surge Pricing Engine"]
-        TripState["🔄 Trip State Machine"]
-    end
-
-    subgraph REDIS["🧠 In-Memory Distributed Cache (Redis 7)"]
-        RedisGeo["📍 Redis GEO (GEOADD / GEOSEARCH)"]
-        RedisLock["🔒 Redlock Atomic Distributed Lock"]
-        RedisPubSub["📡 Socket.IO Redis Adapter"]
-        RedisTTL["⏳ 15s Ephemeral Driver Heartbeats"]
-    end
-
-    subgraph STORAGE["💾 Persistence Tier"]
-        MongoDB[("🍃 MongoDB Database")]
-    end
-
-    RiderApp -->|HTTPS / WSS| ALB
-    CaptainApp -->|HTTPS / WSS| ALB
-    ALB --> SocketGateway
-    ALB --> AuthService
-    SocketGateway <--> RedisPubSub
-    SocketGateway --> RedisGeo
-    TripState --> RedisLock
-    TripState --> MongoDB
-    PricingEngine --> RedisGeo
-```
-
----
-
 ## 🛠️ Tech Stack
 
 | Domain | Technology |
