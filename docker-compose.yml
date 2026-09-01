@@ -1,0 +1,68 @@
+services:
+  # In-Memory Geospatial & Pub/Sub Store
+  redis:
+    image: redis:7-alpine
+    container_name: raahi-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    command: redis-server --save 60 1 --loglevel notice
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  # Primary Database
+  mongodb:
+    image: mongo:7.0
+    container_name: raahi-mongo
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+
+  # Backend REST & Socket.IO API Server (Port 4000)
+  backend:
+    build:
+      context: ./Backend
+      dockerfile: Dockerfile
+    container_name: raahi-backend
+    restart: unless-stopped
+    ports:
+      - "4000:4000"
+    environment:
+      - PORT=4000
+      - NODE_ENV=production
+      - DB_CONNECT=mongodb://mongodb:27017/raahi
+      - JWT_SECRET=raahi_secret
+      - REDIS_URL=redis://redis:6379
+      - LOCATIONIQ_API=pk.2454f0f2edd078ac4c7b3651b73a73a1
+      - AUTOCOMPLETESUGGETION_API=06b26413597641e384218057a020ec5c
+      - GOOGLE_MAPS_API=AIzaSyCym3TtZSETCk1aL8hwcdAbVwEi5a-9wd0
+    depends_on:
+      redis:
+        condition: service_healthy
+      mongodb:
+        condition: service_started
+
+  # Frontend NGINX Web Server (Port 5173 -> Container Port 80)
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        - VITE_BASE_URL=http://localhost:4000
+    container_name: raahi-frontend
+    restart: unless-stopped
+    ports:
+      - "5173:80"
+    depends_on:
+      - backend
+
+volumes:
+  redis-data:
+  mongo-data:

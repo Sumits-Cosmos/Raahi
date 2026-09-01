@@ -1,5 +1,5 @@
 import React, { useContext, useEffect, useState } from 'react'
-import { UserDataContext } from '../context/userContext'
+import { UserDataContext } from '../context/UserContext'
 import { useNavigate } from 'react-router-dom'
 import axios from 'axios'
 
@@ -21,14 +21,19 @@ const UserProtectWrapper = ({
                 Authorization: `Bearer ${token}`
             }
         }).then(response => {
-            if (response.status === 200) {
+            if (response.status === 200 && response.data && response.data._id) {
                 setUser(response.data)
                 setIsLoading(false)
+            } else {
+                localStorage.removeItem('token')
+                setIsLoading(false)
+                navigate('/login')
             }
         })
             .catch(err => {
                 console.log(err)
                 localStorage.removeItem('token')
+                setIsLoading(false)
                 navigate('/login')
             })
     }, [ token ])

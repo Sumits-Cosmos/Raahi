@@ -72,6 +72,25 @@ const createVehicleIcon = (vehicleType = 'car', heading = 0) => {
   });
 };
 
+// Map Style Tile Definitions
+const MAP_STYLES = {
+  street: {
+    name: 'Street View',
+    url: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
+    options: { maxZoom: 20, subdomains: ['a', 'b', 'c', 'd'] }
+  },
+  detailed: {
+    name: 'Detailed Roads',
+    url: 'https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png',
+    options: { maxZoom: 19, subdomains: ['a', 'b', 'c'] }
+  },
+  standard: {
+    name: 'Standard',
+    url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+    options: { maxZoom: 19, subdomains: ['a', 'b', 'c'] }
+  }
+};
+
 const LiveMap = ({
   pickupCoords,
   destinationCoords,
@@ -88,6 +107,7 @@ const LiveMap = ({
 }) => {
   const mapContainerRef = useRef(null);
   const mapInstanceRef = useRef(null);
+  const tileLayerRef = useRef(null);
   
   // Marker & Polyline Layers refs
   const userMarkerRef = useRef(null);
@@ -100,6 +120,8 @@ const LiveMap = ({
   const alternativeRoutesLayerRef = useRef(null);
 
   const [currentCoords, setCurrentCoords] = useState(userLocation || { latitude: 12.9716, longitude: 77.5946 });
+  const [currentMapStyle, setCurrentMapStyle] = useState('street'); // Default to modern Street & Lane View
+  const [showStyleMenu, setShowStyleMenu] = useState(false);
 
   // 1. Get browser geolocation on mount
   useEffect(() => {
@@ -125,7 +147,7 @@ const LiveMap = ({
     }
   }, [userLocation]);
 
-  // 2. Initialize Leaflet Map
+  // 2. Initialize Leaflet Map with Street View
   useEffect(() => {
     if (!mapContainerRef.current) return;
     if (mapInstanceRef.current) return;
@@ -144,10 +166,10 @@ const LiveMap = ({
       doubleClickZoom: interactive
     });
 
-    // Clean OpenStreetMap tiles
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      maxZoom: 19,
-      subdomains: ['a', 'b', 'c'],
+    // Modern Street & Lane View tiles (CartoDB Voyager)
+    tileLayerRef.current = L.tileLayer(MAP_STYLES[currentMapStyle].url, {
+      ...MAP_STYLES[currentMapStyle].options,
+      attribution: ''
     }).addTo(map);
 
     otherCaptainsLayerRef.current = L.layerGroup().addTo(map);
@@ -160,6 +182,23 @@ const LiveMap = ({
       mapInstanceRef.current = null;
     };
   }, []);
+
+  // Handle Dynamic Map Style Switching (Street vs Detailed vs Standard)
+  const changeMapStyle = (styleKey) => {
+    setCurrentMapStyle(styleKey);
+    setShowStyleMenu(false);
+
+    const map = mapInstanceRef.current;
+    if (!map || !MAP_STYLES[styleKey]) return;
+
+    if (tileLayerRef.current) {
+      map.removeLayer(tileLayerRef.current);
+    }
+
+    tileLayerRef.current = L.tileLayer(MAP_STYLES[styleKey].url, {
+      ...MAP_STYLES[styleKey].options
+    }).addTo(map);
+  };
 
   // 3. Update User Location Marker
   useEffect(() => {
@@ -295,7 +334,6 @@ const LiveMap = ({
             lineJoin: 'round'
           });
 
-          // Clicking an alternative route activates it
           altPolyline.on('click', () => {
             if (onSelectRoute) onSelectRoute(idx);
           });
@@ -354,13 +392,11 @@ const LiveMap = ({
     }
   };
 
-  const activeRoute = routes && routes.length > 0 ? routes[selectedRouteIndex] || routes[0] : null;
-
   return (
     <div className={`relative ${className}`}>
       <div ref={mapContainerRef} className="h-full w-full z-0" />
 
-      {/* Floating Smart Route Selector Pills (if alternatives exist) */}
+      {/* Floating Smart Route Selector Pills */}
       {routes && routes.length > 1 && (
         <div className="absolute top-20 left-4 z-[400] flex gap-2 overflow-x-auto max-w-[70%] pb-1 scrollbar-none pointer-events-auto">
           {routes.map((r, idx) => {
@@ -384,15 +420,50 @@ const LiveMap = ({
         </div>
       )}
 
-      {/* Re-center GPS button */}
-      <button
-        type="button"
-        onClick={handleRecenter}
-        className="absolute top-20 right-4 z-[400] bg-white text-gray-800 p-3 rounded-full shadow-lg hover:bg-gray-100 active:scale-95 transition-all flex items-center justify-center border border-gray-200"
-        title="Re-center on my location"
-      >
-        <i className="ri-crosshair-2-line text-xl"></i>
-      </button>
+      {/* Floating Map Controls (GPS Re-center & Map Style Layer Switcher) */}
+      <div className="absolute top-20 right-4 z-[400] flex flex-col gap-2 pointer-events-auto">
+        <button
+          type="button"
+          onClick={handleRecenter}
+          className="bg-white text-gray-800 p-3 rounded-full shadow-lg hover:bg-gray-100 active:scale-95 transition-all flex items-center justify-center border border-gray-200"
+          title="Re-center on my location"
+        >
+          <i className="ri-crosshair-2-line text-xl"></i>
+        </button>
+
+        {/* Map Layer Switcher Button */}
+        <div className="relative">
+          <button
+            type="button"
+            onClick={() => setShowStyleMenu(!showStyleMenu)}
+            className="bg-white text-gray-800 p-3 rounded-full shadow-lg hover:bg-gray-100 active:scale-95 transition-all flex items-center justify-center border border-gray-200"
+            title="Change Map Style"
+          >
+            <i className="ri-road-map-line text-xl"></i>
+          </button>
+
+          {showStyleMenu && (
+            <div className="absolute right-0 mt-2 w-40 bg-white rounded-2xl shadow-2xl border border-gray-200 py-1 z-50 animate-fadeIn">
+              <div className="px-3 py-1 text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                Map Style
+              </div>
+              {Object.entries(MAP_STYLES).map(([key, value]) => (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => changeMapStyle(key)}
+                  className={`w-full text-left px-3 py-2 text-xs font-semibold flex items-center justify-between hover:bg-gray-50 transition-all ${
+                    currentMapStyle === key ? 'text-blue-600 bg-blue-50 font-bold' : 'text-gray-700'
+                  }`}
+                >
+                  <span>{value.name}</span>
+                  {currentMapStyle === key && <i className="ri-check-line text-sm"></i>}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 };

@@ -11,7 +11,7 @@ import WaitingForDriver from '../components/WaitingForDriver';
 import LiveMap from '../components/LiveMap';
 import axios from 'axios'
 import { SocketContext } from '../context/SocketContext';
-import { UserDataContext } from '../context/userContext';
+import { UserDataContext } from '../context/UserContext';
 
 const Home = () => {
   const [pickup, setPickup] = useState('');
@@ -289,20 +289,24 @@ const Home = () => {
           vehicleType={vehicleType}
         />
       </div>
-      <div className='flex flex-col justify-end h-screen absolute top-0 w-full '>
-       <div className='h-[30%] p-6 bg-white relative'>
-        <h2 className='text-2xl font-semibold'>Find a trip</h2>
-        <h2 className='absolute opacity-0 top-5 right-6 text-2xl'
-          ref={panelCloseRef}
-          onClick={() => {setPanelOpen(false)}}
-        >
-          <i className="ri-arrow-down-wide-line"></i>
-        </h2>
-        <form className='relative py-3'
+      <div className='flex flex-col justify-end h-screen absolute top-0 w-full pointer-events-none z-10'>
+       <div className='bg-white p-6 relative rounded-t-3xl shadow-2xl pointer-events-auto'>
+        <div className='flex items-center justify-between mb-2'>
+          <h2 className='text-2xl font-bold text-gray-900'>Find a trip</h2>
+          <button 
+            type='button'
+            ref={panelCloseRef}
+            onClick={() => setPanelOpen(false)}
+            className='w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-600 hover:bg-gray-200 transition-all opacity-0'
+          >
+            <i className="ri-arrow-down-s-line text-xl"></i>
+          </button>
+        </div>
+        <form className='relative py-2'
         onSubmit={(e) => {
           submitHandler(e);
         }}>
-          <div className="line absolute h-16 w-1 top-[50%] -translate-y-1/2 left-5 bg-gray-700 rounded-full"></div>
+          <div className="line absolute h-14 w-1 top-[50%] -translate-y-1/2 left-5 bg-gray-700 rounded-full"></div>
           <input
             value={pickup} 
             onChange={handlePickupChange}
@@ -310,7 +314,7 @@ const Home = () => {
               setPanelOpen(true)
               setActiveField('pickup')
             }}
-            className='bg-[#eee] px-12 py-2 text-lg rounded-lg w-full  mt-3 placeholder:text-base' type="text" placeholder='Add a pickup location'/>
+            className='bg-gray-100 px-12 py-3 text-base font-medium rounded-xl w-full mt-2 placeholder:text-gray-400 focus:bg-white focus:ring-2 focus:ring-black outline-none transition-all' type="text" placeholder='Add a pickup location'/>
           <input 
             value={destination}
             onChange={handleDestinationChange}
@@ -318,14 +322,14 @@ const Home = () => {
               setPanelOpen(true)
               setActiveField('destination')
             }}
-            className='bg-[#eee] px-12 py-2 text-lg rounded-lg w-full  mt-3 text-lg placeholder:text-base' type="text" placeholder='Enter your destination'/>
+            className='bg-gray-100 px-12 py-3 text-base font-medium rounded-xl w-full mt-2 placeholder:text-gray-400 focus:bg-white focus:ring-2 focus:ring-black outline-none transition-all' type="text" placeholder='Enter your destination'/>
         </form>
         <button onClick={findTrip} 
-         className="bg-black text-white px-12 py-2 text-lg rounded-lg w-full mt-3">
+         className="bg-black hover:bg-gray-900 active:scale-95 text-white py-3.5 text-base font-bold rounded-xl w-full mt-3 shadow-lg transition-all">
           Find Trip
         </button>
        </div>
-        <div ref={panelRef} className='h-0  bg-white'>
+        <div ref={panelRef} className='h-0 bg-white overflow-y-auto pointer-events-auto px-6'>
             <LocationSearchPanel
             suggestions={activeField === 'pickup' ? pickupSuggestions : destinationSuggestions}
             setPanelOpen={setPanelOpen} setVehiclePanel= {setVehiclePanel}

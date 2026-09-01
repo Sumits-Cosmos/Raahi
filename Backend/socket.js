@@ -1,6 +1,8 @@
 const socketIo = require('socket.io');
 const userModel = require('./models/user.model');
 const captainModel = require('./models/captain.model');
+const redisService = require('./services/redis.service');
+const { createAdapter } = require('@socket.io/redis-adapter');
 
 let io;
 
@@ -12,13 +14,27 @@ function initializeSocket(server) {
         }
     });
 
+    // Attach Redis adapter if Redis is connected (enables multi-server horizontal scaling)
+    try {
+        if (redisService.isRedisConnected()) {
+            const pubClient = redisService.redisClient;
+            const subClient = pubClient.duplicate();
+            io.adapter(createAdapter(pubClient, subClient));
+            console.log('⚡ [Socket.IO] Redis Pub/Sub Adapter attached successfully');
+        }
+    } catch (err) {
+        console.warn('⚠️ [Socket.IO Adapter warning]:', err.message);
+    }
+
     io.on('connection', (socket) => {
         console.log(`Client connected: ${socket.id}`);
 
-            socket.on('join', async (data) => {
+        socket.on('join', async (data) => {
             const { userId, userType } = data;
             
             console.log(`🔌 [JOIN EVENT] UserType: ${userType}, UserId: ${userId}, SocketId: ${socket.id}`);
+            socket.userId = userId;
+            socket.userType = userType;
 
             try {
                 if (userType === 'user') {
@@ -27,14 +43,25 @@ function initializeSocket(server) {
                 } else if (userType === 'captain') {
                     const captain = await captainModel.findByIdAndUpdate(userId, { socketId: socket.id }, { new: true });
                     console.log(`✅ [JOIN] Captain socketId updated: ${captain?.socketId}`);
+                    
+                    // If captain has known location, register in Redis GEO
+                    if (captain?.location?.coordinates) {
+                        await redisService.setCaptainLocation(
+                            userId,
+                            captain.location.coordinates[1],
+                            captain.location.coordinates[0],
+                            {
+                                vehicleType: captain.vehicle?.vehicleType || 'car',
+                                socketId: socket.id
+                            }
+                        );
+                    }
                 }
             } catch (err) {
                 console.error(`❌ [JOIN ERROR]:`, err.message);
             }
         });
 
-
-        // ... (rest of your socket.on handlers)
         // Join ride room
         socket.on('join-ride-room', (data) => {
             const { rideId } = data;
@@ -53,12 +80,24 @@ function initializeSocket(server) {
             }
 
             try {
-                await captainModel.findByIdAndUpdate(userId, {
+                // 1. High-speed Redis GEO Ingestion (< 1ms)
+                redisService.setCaptainLocation(
+                    userId,
+                    location.latitude,
+                    location.longitude,
+                    {
+                        socketId: socket.id,
+                        vehicleType: data.vehicleType || 'car'
+                    }
+                );
+
+                // 2. Asynchronous MongoDB persistence
+                captainModel.findByIdAndUpdate(userId, {
                     location: {
                         type: 'Point',
                         coordinates: [location.longitude, location.latitude]
                     }
-                });
+                }).catch(err => console.warn('Mongo location update error:', err.message));
 
                 const payload = {
                     captainId: userId,
@@ -90,6 +129,9 @@ function initializeSocket(server) {
 
         socket.on('disconnect', () => {
             console.log(`Client disconnected: ${socket.id}`);
+            if (socket.userType === 'captain' && socket.userId) {
+                redisService.removeCaptainLocation(socket.userId);
+            }
         });
     });
 }

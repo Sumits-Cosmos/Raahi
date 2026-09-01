@@ -22,11 +22,15 @@ const CaptainProtectWrapper = ({children}) => {
             Authorization: `Bearer ${token}`
         }
     }).then((response) => {
-        if(response.status === 200){
+        if(response.status === 200 && response.data && response.data._id){
             console.log("Full API Response:", response.data);
-            setCaptain(response.data)   //do same for user, doing this will 
-            setIsLoading(false);                //enhance the security by fetching the child 
-        }                                       //components data only after verifying token          
+            setCaptain(response.data)
+            setIsLoading(false);
+        } else {
+            localStorage.removeItem('token');
+            setIsLoading(false);
+            navigate('/captain-login');
+        }          
     }).catch((err) => {
         console.log(err);
         localStorage.removeItem('token');

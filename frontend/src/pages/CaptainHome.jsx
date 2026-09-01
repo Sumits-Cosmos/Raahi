@@ -171,11 +171,19 @@ const CaptainHome = () => {
         <CaptainsDetails/>
       </div>
 
-      <div ref={RidePopupRef} className='fixed z-20 w-full bottom-0 bg-white px-3 py-16 translate-y-full pt-12 shadow-2xl rounded-t-3xl'>
+      <div 
+        ref={RidePopupRef} 
+        style={{ display: RidePopupPannel ? 'block' : 'none' }}
+        className='fixed z-20 w-full bottom-0 bg-white px-3 py-16 pt-12 shadow-2xl rounded-t-3xl'
+      >
         <RidePopup ride={ride} setRidePopupPannel={setRidePopupPannel} onAccept={confirmRide} />
       </div>
 
-      <div ref={confirmedRidePanelRef} className='fixed z-20 h-screen w-full bottom-0 bg-white px-3 py-10 translate-y-full pt-12 shadow-2xl'>
+      <div 
+        ref={confirmedRidePanelRef} 
+        style={{ display: confirmedRidePanel ? 'block' : 'none' }}
+        className='fixed z-20 h-screen w-full bottom-0 bg-white px-3 py-10 pt-12 shadow-2xl'
+      >
         <ConfirmedRidePannel ride={ride} setConfirmedRidePanel={setConfirmedRidePanel} setRidePopupPannel={setRidePopupPannel}/>
       </div>
     </div>

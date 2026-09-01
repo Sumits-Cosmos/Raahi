@@ -1,8 +1,10 @@
 const rideService = require('../services/ride.service')
 const { validationResult } = require('express-validator');
 const mapService = require('../services/map.service')
+const redisService = require('../services/redis.service')
 const {sendMessageToSocketId} = require('../socket');
 const rideModel = require('../models/ride.model');
+const captainModel = require('../models/captain.model');
 
 
 
@@ -21,22 +23,42 @@ module.exports.createRide = async(req, res) => {
         console.log('New ride created with pickup coordinates:', pickupCoordiantes);
         console.log(`🎫 OTP for ride ${ride._id}: ${ride.otp}`);
 
-        const captainsInRadius = await mapService.getCaptainsInRadius(pickupCoordiantes.latitude, pickupCoordiantes.longitude, 2);
-        console.log(`Captains found: ${captainsInRadius.length} in 2 km radius.`);
+        // 1. High-speed Redis GEO lookup first (< 1ms)
+        let captainsInRadius = [];
+        const redisCaptains = await redisService.getCaptainsInRadius(pickupCoordiantes.latitude, pickupCoordiantes.longitude, 10);
+        
+        if (redisCaptains && redisCaptains.length > 0) {
+            console.log(`⚡ [Redis GEO] Found ${redisCaptains.length} active captains in RAM`);
+            const captainIds = redisCaptains.map(c => c.captainId);
+            captainsInRadius = await captainModel.find({ _id: { $in: captainIds } });
+        } else {
+            // 2. Fallback to MongoDB radius query (15km)
+            captainsInRadius = await mapService.getCaptainsInRadius(pickupCoordiantes.latitude, pickupCoordiantes.longitude, 15);
+            console.log(`Captains found via MongoDB 15km query: ${captainsInRadius.length}`);
+            
+            // 3. If still 0, notify all active captains connected via sockets (ensures reliable demo/dev testing)
+            if (captainsInRadius.length === 0) {
+                console.log('🔍 Expanding matching to all active online captains with open sockets...');
+                captainsInRadius = await captainModel.find({ socketId: { $exists: true, $ne: null } });
+                console.log(`Found ${captainsInRadius.length} active online captains.`);
+            }
+        }
         
         if (captainsInRadius.length === 0) {
-            console.warn('⚠️ No captains found in 2 km radius. Searching in larger radius...');
+            console.warn('⚠️ No captains currently connected or online.');
         }
 
         const rideWithUser = await rideModel.findOne({_id: ride._id}).populate('user').select('+otp');
 
         captainsInRadius.forEach(captain => {
-            console.log(`✓ Sending ride notification to socket ID: ${captain.socketId}, Captain: ${captain.fullName.firstName}`);
-            sendMessageToSocketId(captain.socketId, {
-                event: 'new-ride',
-                data: rideWithUser
-            })
-        })
+            if (captain.socketId) {
+                console.log(`✓ Sending ride notification to socket ID: ${captain.socketId}, Captain: ${captain.fullName.firstName}`);
+                sendMessageToSocketId(captain.socketId, {
+                    event: 'new-ride',
+                    data: rideWithUser
+                });
+            }
+        });
         
         console.log(`✓ Ride notifications sent to ${captainsInRadius.length} captains`);
         
@@ -76,15 +98,30 @@ module.exports.confirmRide = async(req, res) => {
     const { rideId, captainId } = req.body;
 
     try {
+        // 1. Acquire Atomic Redis Distributed Lock (prevents double-booking race condition)
+        const lockAcquired = await redisService.acquireRideLock(rideId, captainId, 5000);
+        if (!lockAcquired) {
+            return res.status(409).json({ message: 'Ride has already been accepted by another captain' });
+        }
+
+        // 2. Atomically verify and update ride in database
+        const existingRide = await rideModel.findById(rideId);
+        if (!existingRide) {
+            return res.status(404).json({ message: 'Ride not found' });
+        }
+
+        if (existingRide.status !== 'pending') {
+            return res.status(409).json({ message: 'Ride is no longer available' });
+        }
+
         const ride = await rideModel.findByIdAndUpdate(
             rideId,
             { captain: captainId, status: 'accepted' },
             { new: true }
         ).populate('user').populate('captain').select('+otp');
 
-        if (!ride) {
-            return res.status(404).json({ message: 'Ride not found' });
-        }
+        // 3. Remove captain from available GEO pool
+        await redisService.removeCaptainLocation(captainId);
 
         console.log(`✓ Ride ${rideId} confirmed by Captain ${captainId}`);
         
