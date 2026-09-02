@@ -41,6 +41,9 @@ if [ ! -f .env ]; then
     echo "📝 Creating production .env file..."
     read -p "Enter your Docker Hub username: " DOCKER_USER
     read -p "Enter your MongoDB Atlas Connection URI (Press Enter to use local MongoDB): " ATLAS_URI
+    read -p "Enter your LocationIQ API Key (or press Enter for default): " LOCIQ_KEY
+    read -p "Enter your Geoapify Autocomplete API Key (or press Enter for default): " GEO_KEY
+    read -p "Enter your Google Maps API Key (or press Enter for default): " GMAPS_KEY
     
     MONGO_URL=${ATLAS_URI:-mongodb://mongodb:27017/raahi}
 
@@ -49,10 +52,11 @@ DOCKERHUB_USERNAME=$DOCKER_USER
 PORT=4000
 NODE_ENV=production
 DB_CONNECT=$MONGO_URL
-JWT_SECRET=raahi_secure_production_jwt_secret_$(openssl rand -hex 12)
-LOCATIONIQ_API=pk.2454f0f2edd078ac4c7b3651b73a73a1
-AUTOCOMPLETESUGGETION_API=06b26413597641e384218057a020ec5c
-GOOGLE_MAPS_API=AIzaSyCym3TtZSETCk1aL8hwcdAbVwEi5a-9wd0
+REDIS_URL=redis://redis:6379
+JWT_SECRET=raahi_secure_jwt_$(openssl rand -hex 16)
+LOCATIONIQ_API=${LOCIQ_KEY}
+AUTOCOMPLETESUGGETION_API=${GEO_KEY}
+GOOGLE_MAPS_API=${GMAPS_KEY}
 EOT
 fi
 
