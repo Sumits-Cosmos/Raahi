@@ -1,0 +1,56 @@
+services:
+  # In-Memory Cache & Geospatial Engine
+  redis:
+    image: redis:7-alpine
+    container_name: raahi-redis
+    restart: always
+    ports:
+      - "6379:6379"
+    command: redis-server --save 60 1 --loglevel notice
+    volumes:
+      - redis-data:/data
+
+  # Primary Database
+  mongodb:
+    image: mongo:7.0
+    container_name: raahi-mongo
+    restart: always
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+
+  # Backend REST & Socket.IO API Server (Pulls Pre-built Image from Docker Hub)
+  backend:
+    image: ${DOCKERHUB_USERNAME}/raahi-backend:latest
+    container_name: raahi-backend
+    restart: always
+    ports:
+      - "4000:4000"
+    environment:
+      - PORT=4000
+      - NODE_ENV=production
+      - DB_CONNECT=${DB_CONNECT:-mongodb://mongodb:27017/raahi}
+      - REDIS_URL=redis://redis:6379
+      - JWT_SECRET=${JWT_SECRET:-raahi_production_secret_key_99}
+      - LOCATIONIQ_API=${LOCATIONIQ_API:-pk.2454f0f2edd078ac4c7b3651b73a73a1}
+      - AUTOCOMPLETESUGGETION_API=${AUTOCOMPLETESUGGETION_API:-06b26413597641e384218057a020ec5c}
+      - GOOGLE_MAPS_API=${GOOGLE_MAPS_API:-AIzaSyCym3TtZSETCk1aL8hwcdAbVwEi5a-9wd0}
+    depends_on:
+      - redis
+      - mongodb
+
+  # Frontend NGINX Production Web Server (Port 80 & 5173)
+  frontend:
+    image: ${DOCKERHUB_USERNAME}/raahi-frontend:latest
+    container_name: raahi-frontend
+    restart: always
+    ports:
+      - "80:80"
+      - "5173:80"
+    depends_on:
+      - backend
+
+volumes:
+  redis-data:
+  mongo-data:
